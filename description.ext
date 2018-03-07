@@ -1,0 +1,17 @@
+
+saving = 0;
+respawn = 3;
+respawndelay = 5;
+disabledAI = 1;
+
+class Header
+{
+	gameType=COOP;
+	minPlayers=1;
+	maxPlayers=24;
+};
+
+class cfgFunctions
+{
+	#include "cav_minefield\cfgFunctions.hpp"
+};
