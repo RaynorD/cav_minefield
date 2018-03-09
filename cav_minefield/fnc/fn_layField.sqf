@@ -1,46 +1,25 @@
 #include "..\script_macros.hpp"
 
-/*
- * Author: WO1.Raynor.D
- * Place mines
- *
- * Arguments:
- * Area Name
- * Trigger area
- * Mine count
- * Mine Type(s)
- * Minimum Distance
- *
- 
- "Sign_Sphere25cm_F"
- 
- minefield data format:
- 
-	name
-	script hook
-	array of mines
- 
- * Example:
- * 
- */
-
 params ["_target","_caller","_id","_args"];
-_args params ["_ctrlObject","_trigger","_name","_count","_types","_minDistance"];
+_args params ["_ctrlObject","_trigger","_name","_count","_types",["_minDistance",0],["_actionIds",[]],["_active",false],["_mines",[]],["_hook",scriptNull],["_processing",false]];
 
 LOG_1("Laying minefield: %1",_this); 
 
-SET_VAR(_trigger,GVAR(fieldSet),true);
+_fieldLookup = [_ctrlObject,_name] call FUNC(getField);
+_fieldLookup params [["_field",[]],["_fieldId",-1]];
 
-{ deleteVehicle _x; } foreach (GET_VAR(_trigger,GVAR(mines),[]));
+// check if another thread is working on the minefield, if not mark it as so
+if(_field select 10) exitWith {ERROR_1("%1 is still processing, aborting action", _field)};
+_field set [10, true];
 
-if(isNil QGVAR(minefieldData)) then {GVAR(minefieldData) = []};
+// set active flag to true to flip actions
+_field set [7, true];
 
 //if(true) exitWith {};
 
-//{deleteVehicle _x} foreach GVAR(minefieldData);
-sleep 1;
+//sleep 1;
 
-_mines = [];
+_newMines = [];
 _minesPos = [];
 for "_i" from 0 to (_count - 1) do {
 	_pos = [];
@@ -67,17 +46,14 @@ for "_i" from 0 to (_count - 1) do {
 	_type = (_types select (floor random (count _types)));
 	_mine = (_type createvehicle _pos);
 	_mine setDir (random 360);
-	_mines pushback _mine;
+	_newMines pushback _mine;
 	_minesPos pushBack _pos;
 };
 
-SET_VAR(_trigger,GVAR(mines),_mines);
-
-
-_hook = [_trigger,_name] spawn {
-	params ["_trigger","_name"];
+_hook = [_trigger,_name, _field, _newMines] spawn {
+	params ["_trigger","_name","_field","_newMines"];
 	
-	LOG_3("Watching array: %1 > %2 (Count: %3)", _trigger, (GET_VAR(_trigger,GVAR(mines),[])), count (GET_VAR(_trigger,GVAR(mines),[])));
+	LOG_3("Watching array: %1 > %2 (Count: %3)", _trigger, _newMines, count _newMines);
 
 	_cleared = false;
 	while{!_cleared} do {
@@ -85,7 +61,7 @@ _hook = [_trigger,_name] spawn {
 		_continue = true;
 		{
 			if(!isNull _x) exitWith {_continue = false};
-		} foreach (GET_VAR(_trigger,GVAR(mines),[]));
+		} foreach _newMines;
 		if(_continue) then {_cleared = true};
 	};
 	
@@ -95,10 +71,12 @@ _hook = [_trigger,_name] spawn {
 		deleteVehicle _x;
 	} foreach nearestObjects [_trigger,["GroundWeaponHolder"],((triggerArea _trigger select 0) max (triggerArea _trigger select 1)) * 2];
 
-	SET_VAR(_trigger,GVAR(fieldSet),nil);
+	_field set [7, false];
 	hint format ["Minefield (%1) cleared! Good job!", _name];
 };
 
-SET_VAR(_trigger,GVAR(layHook),_hook);
+_field set [8,_newMines];
+_field set [9,_hook];
+_field set [10, false];
 
 

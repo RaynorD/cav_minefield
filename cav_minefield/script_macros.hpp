@@ -1,6 +1,6 @@
 #include ".\script_mod.hpp"
 
-//Macros adapted from by the brilliant work at CBA. Give them some love at https://github.com/CBATeam/CBA_A3
+/* Macros adapted from by the brilliant work at CBA. Give them some love at https://github.com/CBATeam/CBA_A3 */
 
 #define PROJECT_VERSION MAJOR.MINOR.PATCHLVL.BUILD
 #define PROJECT_VERSION_AR MAJOR,MINOR,PATCHLVL,BUILD
@@ -8,6 +8,7 @@
 #define DOUBLES(var1,var2) ##var1##_##var2
 #define TRIPLES(var1,var2,var3) ##var1##_##var2##_##var3
 #define QUOTE(var1) #var1
+#define QQUOTE(var1) QUOTE(QUOTE(var1))
 
 #define GVAR(var1) DOUBLES(DOUBLES(PREFIX,COMPONENT),var1)
 #define QGVAR(var1) QUOTE(GVAR(var1))
@@ -15,15 +16,6 @@
 
 #define FUNC(var1) TRIPLES(DOUBLES(PREFIX,COMPONENT),fnc,var1)
 #define QFUNC(var1) QUOTE(FUNC(var1))
-
-#define SCRIPT_FOLDER DOUBLES(PREFIX,COMPONENT)
-#define SCRIPT(var1) QUOTE(SCRIPT_FOLDER\fnc\var1.sqf)
-
-#ifdef DEBUG_MODE
-	#define DEF_FUNC(var1) FUNC(var1) = compile preProcessFileLineNumbers SCRIPT(var1)
-#else
-	#define DEF_FUNC(var1) FUNC(var1) = compileFinal preProcessFileLineNumbers SCRIPT(var1)
-#endif
 
 #define FUNC_1(var1,var2) [var2] call FUNC(var1)
 #define FUNC_2(var1,var2,var3) [var2,var3] call FUNC(var1)
@@ -81,8 +73,6 @@
 	#define LOG_6(MESSAGE,ARG1,ARG2,ARG3,ARG4,ARG5,ARG6) LOG(FORMAT_6(MESSAGE,ARG1,ARG2,ARG3,ARG4,ARG5,ARG6))
 	#define LOG_7(MESSAGE,ARG1,ARG2,ARG3,ARG4,ARG5,ARG6,ARG7) LOG(FORMAT_7(MESSAGE,ARG1,ARG2,ARG3,ARG4,ARG5,ARG6,ARG7))
 	#define LOG_8(MESSAGE,ARG1,ARG2,ARG3,ARG4,ARG5,ARG6,ARG7,ARG8) LOG(FORMAT_8(MESSAGE,ARG1,ARG2,ARG3,ARG4,ARG5,ARG6,ARG7,ARG8))
-	#define LOG_VAR(var1) LOG_2("%1: %2",QUOTE(var1),var1)
-	#define LOG_GVAR(var1) LOG_VAR(GVAR(var1))
 	
 #else
 
@@ -95,8 +85,6 @@
 	#define LOG_6(MESSAGE,ARG1,ARG2,ARG3,ARG4,ARG5,ARG6) /* disabled */
 	#define LOG_7(MESSAGE,ARG1,ARG2,ARG3,ARG4,ARG5,ARG6,ARG7) /* disabled */
 	#define LOG_8(MESSAGE,ARG1,ARG2,ARG3,ARG4,ARG5,ARG6,ARG7,ARG8) /* disabled */
-	#define LOG_VAR(var1) /* disabled */
-	#define LOG_GVAR(var1) /* disabled */
 
 #endif
 
@@ -157,10 +145,43 @@
 #define ERROR_WITH_TITLE_7(TITLE,MESSAGE,ARG1,ARG2,ARG3,ARG4,ARG5,ARG6,ARG7) ERROR_WITH_TITLE(TITLE,FORMAT_7(MESSAGE,ARG1,ARG2,ARG3,ARG4,ARG5,ARG6,ARG7))
 #define ERROR_WITH_TITLE_8(TITLE,MESSAGE,ARG1,ARG2,ARG3,ARG4,ARG5,ARG6,ARG7,ARG8) ERROR_WITH_TITLE(TITLE,FORMAT_8(MESSAGE,ARG1,ARG2,ARG3,ARG4,ARG5,ARG6,ARG7,ARG8))
 
-#define DEF_VAR(var1,var2) if(isNil QUOTE(var1)) then {var1 = var2}
+/* End CBA macros */
+
+/* Start custom macros */
+
+#define SCRIPT_FOLDER DOUBLES(PREFIX,COMPONENT)
+#define SCRIPT(var1) SCRIPT_FOLDER\fnc\fn_##var1##.sqf
+
+#define DEF_FUNC(var1) class var1 {file = #SCRIPT(var1);}
+
+#define SET_VAR(var1,var2,var3) var1 setVariable [#var2,var3]
+#define SET_VAR_G(var1,var2,var3) var1 setVariable [#var2,var3,true]
+#define UNSET_VAR(var1,var2,var3) SET_VAR(var1,var2,nil)
+#define GET_VAR_D(var1,var2,var3) var1 getVariable [#var2,var3]
+#define GET_VAR(var1,var2) GET_VAR_D(var1,var2,nil)
+#define GET_VAR_ARR(var1,var2) GET_VAR_D(var1,var2,[])
+
+#define DEF_VAR(var1,var2) if(isNil #var1) then {var1 = var2}
 #define DEF_GVAR(var1,var2) DEF_VAR(GVAR(var1),var2)
 
-#define SET_VAR(var1,var2,var3) var1 setVariable [QUOTE(var2),var3]
-#define GET_VAR(var1,var2,var3) var1 getVariable [QUOTE(var2),var3]
+#define DEF_NVAR(var1,var2,var3) if(isNil {GET_VAR(var1,var2)})) then {SET_VAR(var1,var2,var3)}
+#define DEF_NVAR_G(var1,var2,var3) if(isNil {GET_VAR(var1,var2)})) then {SET_VAR_G(var1,var2,var3)}
 
-//End CBA macros
+#define DEF_MVAR(var1,var2) DEF_NVAR(missionNamespace,var1,var2)
+#define DEF_MVAR_G(var1,var2) DEF_NVAR_G(missionNamespace,var1,var2)
+
+//#define ACTION_COND(var1,var2) FORMAT_1(QUOTE(!(((GET_VAR(var1,var2)) select %1) select 7)),_fieldId)
+#define ACTION_COND(var1,var2,var3) FORMAT_3(ARG_2(GET_VAR(%1,%2),%3),var1,var2,var3)
+//#define ACTION_COND_NOT(var1,var2) FORMAT_2(QUOTE(!ARG_2(%1,%2,7)),var1,var2)
+
+#ifdef DEBUG_MODE
+	#define LOG_VAR(var1) LOG_2("%1: %2",QUOTE(var1),var1)
+	#define LOG_GVAR(var1) LOG_VAR(GVAR(var1))
+	//#define LOG_NVAR(var1,var2) LOG_2("%1: %2", format ["##var1 getVariable [%2,'undefined']", #var1, #var2 ], var1 getVariable [ #var2 ,"undefined"])
+	#define LOG_NVAR(var1,var2) LOG_2("%1: %2", (FORMAT_2("%1 getVariable [%2,'undefined']", QUOTE(var1), QUOTE(var2))), GET_VAR_D(var1,var2,'undefined')))
+#else
+	#define LOG_GVAR(var1) /* disabled */
+	#define LOG_NVAR(var1,var2) /* disabled */
+	#define LOG_VAR(var1) /* disabled */
+#endif
+
