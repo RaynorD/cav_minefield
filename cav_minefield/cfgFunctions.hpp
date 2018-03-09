@@ -5,10 +5,10 @@ class DOUBLES(PREFIX,COMPONENT) //tag
 {
 	class fnc //category
 	{
-		file = "cav_minefield\fnc";
-		class initField {};
-		class layField {};
-		class resetField {};
-		class clearField {};
+		
+		class initField {file = "cav_minefield\fnc\fn_initField.sqf";};
+		class layField {file = "cav_minefield\fnc\fn_layField.sqf";};
+		class resetField {file = "cav_minefield\fnc\fn_resetField.sqf";};
+		class clearField {file = "cav_minefield\fnc\fn_clearField.sqf";};
 	};
 };
