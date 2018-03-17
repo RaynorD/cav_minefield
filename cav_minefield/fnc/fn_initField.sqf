@@ -1,8 +1,5 @@
 #include "..\script_macros.hpp"
 
-// fields should only init from server
-if(isMultiplayer && !isServer) exitWith {};
-
 INFO_2("Initializing minefield: %1 (Build: %2)",_this,QUOTE(PROJECT_VERSION)); 
 
 params ["_ctrlObject","_trigger","_name","_count","_types",["_minDistance",0]]; // ["_actionIds",[]],["_active",false],["_mines",[]],["_hook",scriptNull]
